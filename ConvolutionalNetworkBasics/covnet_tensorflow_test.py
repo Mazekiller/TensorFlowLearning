@@ -1,10 +1,10 @@
 from tensorflow.examples.tutorials.mnist import input_data
-mnist = input_data.read_data(".", one_hot=True, reshape=False)
+mnist = input_data.read_data_sets(".", one_hot=True, reshape=False)
 
 import tensorflow as tf
 
 #Hyperparameters.
-learn_rate = 0.000001
+learn_rate = 0.00002
 epochs = 10
 batch_size = 128
 
@@ -53,13 +53,14 @@ def conv_net(x, weights, biases, dropout):
 	conv2 = maxpool2d(conv2, k=2)
 	
 	#Fully connected layer. 7*7*64 to 1024
-	fc1 = tf.reshape(conv2, [-1, weights['fullconnect'].get_shape().as_list()[0])
+	#First flatten the network.
+	fc1 = tf.reshape(conv2, [-1, weights['fullconnect'].get_shape().as_list()[0]])
 	fc1 = tf.add(tf.matmul(fc1, weights['fullconnect']), biases['fullconnect'])
 	fc1 = tf.nn.relu(fc1)
 	fc1 = tf.nn.dropout(fc1, dropout)
 	
 	#Output layer, 1024 to 10
-	out = tf.add(tf.matmul(fc1, weights['output']), biases['output'])
+	output = tf.add(tf.matmul(fc1, weights['output']), biases['output'])
 	return output
 	
 #Session code.
@@ -95,7 +96,40 @@ with tf.Session() as sess:
 		#Batch loop.
 		for batch in range(mnist.train.num_examples//batch_size):
 			batch_x, batch_y = mnist.train.next_batch(batch_size)
-			sess.run(optimizer, feed_dict={ x: batch_x, y: batch_y, keep_prob: dropout })
+			sess.run(optimizer, feed_dict={ 
+				x: batch_x, 
+				y: batch_y, 
+				keep_prob: dropout 
+			})
+			
+			#loss and accuracy. These are run in the session too.
+			loss = sess.run(accuracy, feed_dict={
+				x: batch_x,
+				y: batch_y,
+				keep_prob: 1
+			})
+			
+			validation_accuracy = sess.run(accuracy, feed_dict={
+				x: mnist.validation.images[:test_validation_size],
+				y: mnist.validation.labels[:test_validation_size],
+				keep_prob: 1.
+			})
+			
+			print('Epoch {:>2}, Batch {:>3} - '
+				  'Loss: {:>10.4f} Validaction Accuracy: {:.6f}'.format(
+				  epoch + 1,
+				  batch + 1,
+				  loss,
+				  validation_accuracy))
+	
+	test_acc = sess.run(accuracy, feed_dict={
+		x: mnist.test.images[:test_validation_size],
+		y: mnist.test.labels[:test_validation_size],
+		keep_prob: 1
+	})
+	
+	print('Testing Accuracy: {}'.format(test_acc))
+			
 	
 	
 	
